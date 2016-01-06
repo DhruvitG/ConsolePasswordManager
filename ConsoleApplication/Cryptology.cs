@@ -7,12 +7,12 @@ using System.Security;
 using System.Security.Cryptography;
 using System.IO;
 
-namespace ConsoleApplication
+namespace PasswordManager
 {
     internal sealed class Cryptology
     {
         private const string Salt = "d5fg4df5sg4ds5fg45sdfg4";
-        private const int SizeOfBuffer = 1024 * 8;
+        private const int SizeOfBuffer = 16;
 
         internal static byte[] EncryptStringToBytes(string plainText, byte[] key, byte[] iv)
         {
@@ -104,69 +104,84 @@ namespace ConsoleApplication
             return plaintext;
         }
 
-        internal static void EncryptFile(string inputPath, string outputPath, string password)
+        public static void EncryptFile(string sInputFilename,
+         string sOutputFilename,
+         string sKey)
         {
-            var input = new FileStream(inputPath, FileMode.Open, FileAccess.Read);
-            var output = new FileStream(outputPath, FileMode.OpenOrCreate, FileAccess.Write);
+            FileStream fsInput = new FileStream(sInputFilename,
+               FileMode.Open,
+               FileAccess.Read);
 
-            // Essentially, if you want to use RijndaelManaged as AES you need to make sure that:
-            // 1.The block size is set to 128 bits
-            // 2.You are not using CFB mode, or if you are the feedback size is also 128 bits
-
-            var algorithm = new RijndaelManaged { KeySize = 256, BlockSize = 128 };
-            var key = new Rfc2898DeriveBytes(password, Encoding.ASCII.GetBytes(Salt));
-
-            algorithm.Key = key.GetBytes(algorithm.KeySize / 8);
-            algorithm.IV = key.GetBytes(algorithm.BlockSize / 8);
-
-            using (var encryptedStream = new CryptoStream(output, algorithm.CreateEncryptor(), CryptoStreamMode.Write))
+            using (FileStream fsEncrypted = new FileStream(sOutputFilename,
+               FileMode.Create,
+               FileAccess.Write))
             {
-                CopyStream(input, encryptedStream);
+                DESCryptoServiceProvider DES = new DESCryptoServiceProvider();
+                DES.Key = ASCIIEncoding.ASCII.GetBytes(sKey);
+                DES.IV = ASCIIEncoding.ASCII.GetBytes(sKey);
+                ICryptoTransform desencrypt = DES.CreateEncryptor();
+                CryptoStream cryptostream = new CryptoStream(fsEncrypted,
+                   desencrypt,
+                   CryptoStreamMode.Write);
+
+                byte[] bytearrayinput = new byte[fsInput.Length];
+                fsInput.Read(bytearrayinput, 0, bytearrayinput.Length);
+                cryptostream.Write(bytearrayinput, 0, bytearrayinput.Length);
+                cryptostream.Close();
+                fsInput.Close();
+                fsEncrypted.Close();
             }
+            
         }
 
-        internal static void DecryptFile(string inputPath, string outputPath, string password)
+        public static void DecryptFile(string sInputFilename,
+           string sOutputFilename,
+           string sKey)
         {
-            var input = new FileStream(inputPath, FileMode.Open, FileAccess.Read);
-            var output = new FileStream(outputPath, FileMode.OpenOrCreate, FileAccess.Write);
+            DESCryptoServiceProvider DES = new DESCryptoServiceProvider();
+            //A 64 bit key and IV is required for this provider.
+            //Set secret key For DES algorithm.
+            DES.Key = ASCIIEncoding.ASCII.GetBytes(sKey);
+            //Set initialization vector.
+            DES.IV = ASCIIEncoding.ASCII.GetBytes(sKey);
 
-            // Essentially, if you want to use RijndaelManaged as AES you need to make sure that:
-            // 1.The block size is set to 128 bits
-            // 2.You are not using CFB mode, or if you are the feedback size is also 128 bits
-            var algorithm = new RijndaelManaged { KeySize = 256, BlockSize = 128 };
-            var key = new Rfc2898DeriveBytes(password, Encoding.ASCII.GetBytes(Salt));
-
-            algorithm.Key = key.GetBytes(algorithm.KeySize / 8);
-            algorithm.IV = key.GetBytes(algorithm.BlockSize / 8);
-
-            try
+            //Create a file stream to read the encrypted file back.
+            using (FileStream fsread = new FileStream(sInputFilename,
+               FileMode.Open,
+               FileAccess.Read))
             {
-                using (var decryptedStream = new CryptoStream(output, algorithm.CreateDecryptor(), CryptoStreamMode.Write))
-                {
-                    CopyStream(input, decryptedStream);
-                }
+                //Create a DES decryptor from the DES instance.
+                ICryptoTransform desdecrypt = DES.CreateDecryptor();
+                //Create crypto stream set to read and do a 
+                //DES decryption transform on incoming bytes.
+                CryptoStream cryptostreamDecr = new CryptoStream(fsread,
+                   desdecrypt,
+                   CryptoStreamMode.Read);
+                //Print the contents of the decrypted file.
+                StreamWriter fsDecrypted = new StreamWriter(sOutputFilename);
+                fsDecrypted.Write(new StreamReader(cryptostreamDecr).ReadToEnd());
+                fsDecrypted.Flush();
+                fsDecrypted.Close();
             }
-            catch (CryptographicException)
-            {
-                throw new InvalidDataException("Please supply a correct password");
-            }
-            catch (Exception ex)
-            {
-                throw new Exception(ex.Message);
-            }
+            
         }
 
-        private static void CopyStream(Stream input, Stream output)
-        {
+        private static void CopyStream(FileStream input, CryptoStream output)
+        {            
             using (output)
             using (input)
             {
+                
                 byte[] buffer = new byte[SizeOfBuffer];
-                int read;
+                int read;                
                 while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
                 {
+                    string result = System.Text.Encoding.UTF8.GetString(buffer);
+                    Console.WriteLine(result);
+                    //Console.WriteLine("buffer length: " + read);
                     output.Write(buffer, 0, read);
                 }
+                output.FlushFinalBlock();
             }
         }
     }

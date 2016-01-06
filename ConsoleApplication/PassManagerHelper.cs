@@ -9,7 +9,7 @@ using System.IO;
 using System.Security;
 using System.Runtime.InteropServices;
 
-namespace ConsoleApplication
+namespace PasswordManager
 {
     public class PassManagerHelper
     {
@@ -82,7 +82,7 @@ namespace ConsoleApplication
                 outputFile.WriteLine(accountTitle + ", " + username + ", " + accountPassword);
             }
             Cryptology.EncryptFile(this.decryptedFilePath, this.encryptedFilePath, this.masterPassword);
-            File.Delete(this.decryptedFilePath);
+            //File.Delete(this.decryptedFilePath);
             Console.WriteLine("Account added successfully");
         }
 
@@ -96,7 +96,8 @@ namespace ConsoleApplication
             Cryptology.DecryptFile(this.encryptedFilePath, this.decryptedFilePath, this.masterPassword);
 
             string[] lines = File.ReadAllLines(this.decryptedFilePath);
-            if(lines.Length < 2)
+            
+            if (lines.Length < 2)
             {
                 Console.WriteLine("No accounts exist. Please add an account from the main menu.");
             }
@@ -129,7 +130,7 @@ namespace ConsoleApplication
             }
             
 
-            File.Delete(this.decryptedFilePath);
+            //File.Delete(this.decryptedFilePath);
         }
 
         public void deleteAccount()
@@ -140,9 +141,11 @@ namespace ConsoleApplication
                 return;
             }
             Cryptology.DecryptFile(this.encryptedFilePath, this.decryptedFilePath, this.masterPassword);
-
+                    
             string[] lines = File.ReadAllLines(this.decryptedFilePath);
-            if(lines.Length < 2)
+
+            File.Delete(this.decryptedFilePath);           
+            if (lines.Length < 2)
             {
                 Console.WriteLine("No accounts exist. Please add an account from the main menu.");
             }else
@@ -168,9 +171,7 @@ namespace ConsoleApplication
                     Console.Write("Please enter a valid option: ");
                     option = Console.ReadLine();
                     accountSelected = int.Parse(option);
-                }
-
-                File.Delete(this.decryptedFilePath);
+                }               
 
                 using (StreamWriter streamWriter = new StreamWriter(this.decryptedFilePath))
                 {
@@ -178,6 +179,7 @@ namespace ConsoleApplication
                     {
                         if (i != accountSelected)
                         {
+                            Console.WriteLine(lines[i]);
                             streamWriter.WriteLine(lines[i]);
                         }
                     }
@@ -187,7 +189,7 @@ namespace ConsoleApplication
                 Cryptology.EncryptFile(this.decryptedFilePath, this.encryptedFilePath, this.masterPassword);
             }
             
-            File.Delete(this.decryptedFilePath);
+            //File.Delete(this.decryptedFilePath);
         }
 
         private string getPassword()
