@@ -4,6 +4,7 @@ namespace PasswordManager
 {
     class Program
     {
+        [STAThread]
         static void Main(string[] args)
         {
             // Welcome message
@@ -34,7 +35,7 @@ namespace PasswordManager
                         passManagerHelper.deleteAccount();
                         break;
                     case 4:
-                        passManagerHelper.editAccount();
+                        passManagerHelper.changeAccountPassword();
                         break;
                     default:
                         break;

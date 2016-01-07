@@ -6,8 +6,7 @@ using System.Threading.Tasks;
 using System.Security.Cryptography;
 using System.Collections;
 using System.IO;
-using System.Security;
-using System.Runtime.InteropServices;
+using System.Windows.Forms;
 
 namespace PasswordManager
 {
@@ -26,6 +25,7 @@ namespace PasswordManager
 
         public bool authenticateUser()
         {
+            // TODO: remove hard-coded password
             byte[] byte_real_password = Encoding.ASCII.GetBytes("password");
             SHA256 mySHA256 = SHA256Managed.Create();
             byte[] realHashValue = mySHA256.ComputeHash(byte_real_password);
@@ -50,7 +50,7 @@ namespace PasswordManager
             Console.WriteLine("1) View your saved accounts");
             Console.WriteLine("2) Add an account");
             Console.WriteLine("3) Delete an account");
-            Console.WriteLine("4) Edit an account");
+            Console.WriteLine("4) Change an account's password");
             Console.WriteLine("5) Exit");
             Console.WriteLine("Enter a number for the corresponding menu option:");
             string option = Console.ReadLine();
@@ -76,13 +76,13 @@ namespace PasswordManager
             string username = Console.ReadLine();
             Console.Write("Please enter the password for this account: ");
             string accountPassword = Console.ReadLine();
-            // Write the string array to a new file named "WriteLines.txt".
+
             using (StreamWriter outputFile = new StreamWriter(this.decryptedFilePath, true))
             {
                 outputFile.WriteLine(accountTitle + ", " + username + ", " + accountPassword);
             }
             Cryptology.EncryptFile(this.decryptedFilePath, this.encryptedFilePath, this.masterPassword);
-            //File.Delete(this.decryptedFilePath);
+            File.Delete(this.decryptedFilePath);
             Console.WriteLine("Account added successfully");
         }
 
@@ -127,10 +127,12 @@ namespace PasswordManager
                 Console.WriteLine(accounts[accountSelected][0] + " Account Details:");
                 Console.WriteLine("Username: " + accounts[accountSelected][1]);
                 Console.WriteLine("Password: " + accounts[accountSelected][2]);
+
+                Clipboard.SetText(accounts[accountSelected][2]);
             }
             
 
-            //File.Delete(this.decryptedFilePath);
+            File.Delete(this.decryptedFilePath);
         }
 
         public void deleteAccount()
@@ -178,18 +180,86 @@ namespace PasswordManager
                     for (int i = 0; i < lines.Length; i++)
                     {
                         if (i != accountSelected)
-                        {
-                            Console.WriteLine(lines[i]);
+                        {                            
                             streamWriter.WriteLine(lines[i]);
                         }
                     }
                 }
-                Console.WriteLine("Account deleted successfully");
+                
 
                 Cryptology.EncryptFile(this.decryptedFilePath, this.encryptedFilePath, this.masterPassword);
+                Console.WriteLine("Account deleted successfully");
             }
             
-            //File.Delete(this.decryptedFilePath);
+            File.Delete(this.decryptedFilePath);
+        }
+
+        public void changeAccountPassword()
+        {
+            if (!File.Exists(this.encryptedFilePath))
+            {
+                Console.WriteLine("No accounts exist. Please add an account from the main menu.");
+                return;
+            }
+            Cryptology.DecryptFile(this.encryptedFilePath, this.decryptedFilePath, this.masterPassword);
+
+            string[] lines = File.ReadAllLines(this.decryptedFilePath);
+
+            File.Delete(this.decryptedFilePath);
+            if (lines.Length < 2)
+            {
+                Console.WriteLine("No accounts exist. Please add an account from the main menu.");
+            }
+            else
+            {
+                string[][] accounts = new string[lines.Length][];
+                for (int i = 1; i < lines.Length; i++)
+                {
+                    accounts[i] = lines[i].Split(',');
+                }
+                for (int i = 1; i < accounts.Length; i++)
+                {
+                    Console.Write(i + ") ");
+                    Console.WriteLine(accounts[i][0]);
+                }
+
+                //read user input for which account they want credentials for
+                Console.Write("Please select an account by entering its corresponding number: ");
+                string option = Console.ReadLine();
+                int accountSelected = int.Parse(option);
+
+                while (!(accountSelected > 0 && accountSelected < accounts.Length))
+                {
+                    Console.Write("Please enter a valid option: ");
+                    option = Console.ReadLine();
+                    accountSelected = int.Parse(option);
+                }
+
+                Console.Write("Please enter the new password: ");
+                string newPassword = Console.ReadLine();
+
+                using (StreamWriter streamWriter = new StreamWriter(this.decryptedFilePath))
+                {
+                    for (int i = 0; i < lines.Length; i++)
+                    {
+                        if (i != accountSelected)
+                        {                            
+                            streamWriter.WriteLine(lines[i]);
+                        }
+                        else
+                        {
+                            streamWriter.Write(accounts[i][0] + "," + accounts[i][1] + ",");
+                            streamWriter.WriteLine(newPassword);
+                        }
+                    }
+                }
+                
+
+                Cryptology.EncryptFile(this.decryptedFilePath, this.encryptedFilePath, this.masterPassword);
+                Console.WriteLine("Account password changed successfully");
+            }
+
+            File.Delete(this.decryptedFilePath);
         }
 
         private string getPassword()
@@ -218,11 +288,6 @@ namespace PasswordManager
             }
             Console.WriteLine();
             return pwd;
-        }
-
-        public void editAccount()
-        {
-
         }
     }
 

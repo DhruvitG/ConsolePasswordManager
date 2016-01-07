@@ -104,6 +104,7 @@ namespace PasswordManager
             return plaintext;
         }
 
+        // TODO: use AES instead of DES
         public static void EncryptFile(string sInputFilename,
          string sOutputFilename,
          string sKey)
